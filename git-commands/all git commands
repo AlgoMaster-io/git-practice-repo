@@ -1,0 +1,443 @@
+# Git Commands: Practical Reference
+
+Git has many commands, including low-level plumbing commands. This guide covers
+the commands used most often in everyday development. To inspect every command
+available in your Git installation, run `git help -a`; for conceptual guides,
+run `git help -g`.
+
+## 1. Getting Help
+
+```bash
+git help <command>
+git <command> --help
+git <command> -h
+git help -a
+git help -g
+```
+
+- `git help <command>` opens the full manual page for a command, such as
+	`git help commit`.
+- `git <command> --help` opens that command's manual.
+- `git <command> -h` prints a short usage summary in the terminal.
+- `git help -a` lists available Git commands, including installed extensions.
+- `git help -g` lists Git's guides, such as revisions and attributes.
+
+## 2. First-Time Setup
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+git config --global init.defaultBranch main
+git config --global core.editor "code --wait"
+git config --list --show-origin
+```
+
+- `git config` reads or changes configuration. `--global` applies to your user
+	account; omit it to set a value only in the current repository. `--system`
+	applies machine-wide.
+- `user.name` and `user.email` are recorded as the author identity on new
+	commits. They do not authenticate you to a hosting service.
+- `init.defaultBranch` chooses the initial branch name for new repositories.
+- `core.editor` selects the editor Git opens for commit messages and other text.
+- `git config --list --show-origin` displays settings and the files they came
+	from. Read one value with `git config user.name`; remove it with
+	`git config --global --unset user.name`.
+
+Aliases can shorten frequent commands:
+
+```bash
+git config --global alias.st "status --short --branch"
+git config --global alias.lg "log --oneline --graph --decorate --all"
+git st
+git lg
+```
+
+## 3. Create or Copy a Repository
+
+```bash
+git init
+git init <directory>
+git clone <url>
+git clone <url> <directory>
+git clone --branch <branch> <url>
+```
+
+- `git init` starts a repository in the current directory by creating `.git`.
+	It does not add or commit files.
+- `git init <directory>` creates a repository in a new or existing directory.
+- `git clone <url>` downloads a repository, its history, and normally checks
+	out its default branch. The second form chooses the local directory name.
+- `--branch` checks out a named branch (or tag) after cloning.
+
+## 4. Check Repository State and Changes
+
+```bash
+git status
+git status --short
+git status --branch
+git diff
+git diff --staged
+git diff HEAD
+git diff -- <file>
+git diff <commit-a> <commit-b>
+```
+
+- `git status` reports the current branch and untracked, modified, staged, or
+	conflicted files. It is read-only; run it often.
+- `git status --short` gives a compact status. Its two status columns describe
+	the index (staging area) and working tree, respectively.
+- `git diff` shows unstaged changes compared with the index.
+- `git diff --staged` (also `--cached`) shows staged changes compared with the
+	latest commit.
+- `git diff HEAD` compares tracked working-tree and staged changes with the
+	latest commit.
+- Add `-- <file>` to limit a diff to a path. `--` separates options from paths.
+- `git diff <commit-a> <commit-b>` compares two commits, showing changes from
+	the first commit to the second.
+
+## 5. Stage and Commit Changes
+
+```bash
+git add <file>
+git add <file1> <file2>
+git add .
+git add -p
+git reset <file>
+git restore --staged <file>
+git commit -m "Describe the change"
+git commit
+git commit -am "Describe tracked-file changes"
+git commit --amend
+```
+
+- `git add <file>` stages that file's current content for the next commit.
+	Staging specific files helps keep commits focused.
+- `git add .` stages new and changed files under the current directory. Check
+	`git status` first so unrelated work is not included.
+- `git add -p` interactively stages selected parts (hunks) of changes.
+- `git reset <file>` and `git restore --staged <file>` unstage a file while
+	preserving its working-tree edits.
+- `git commit -m "..."` creates a commit from staged changes. A commit is a
+	saved snapshot with a message and parent history. `git commit` opens the
+	configured editor for the message.
+- `git commit -am "..."` stages and commits modifications and deletions to
+	already tracked files. It does not include new, untracked files.
+- `git commit --amend` replaces the latest commit with a new one, including
+	staged changes. It changes history; avoid amending commits already shared with
+	others unless your team agrees.
+
+Typical small change:
+
+```bash
+git status
+git diff
+git add src/utils.js
+git diff --staged
+git commit -m "Add utility function"
+git status
+```
+
+## 6. Branches and Switching
+
+```bash
+git branch
+git branch --all
+git branch <branch>
+git branch -d <branch>
+git branch -D <branch>
+git switch <branch>
+git switch -c <new-branch>
+git checkout <branch>
+git checkout -b <new-branch>
+```
+
+- `git branch` lists local branches; `git branch --all` also lists remote
+	tracking branches.
+- `git branch <branch>` creates a branch but leaves you on the current branch.
+- `git switch <branch>` changes the current branch. Git may stop if switching
+	would overwrite uncommitted changes.
+- `git switch -c <new-branch>` creates and switches to a branch in one step.
+- `git checkout` is the older, multi-purpose command. `switch` is clearer for
+	branch operations; `restore` is clearer for restoring files.
+- `git branch -d <branch>` deletes a branch only if Git considers it merged.
+- `git branch -D <branch>` force-deletes a local branch, including unmerged
+	work. Use it only when you are sure those commits are no longer needed.
+- Names such as `feature/add-search` and `fix/config-error` make intent clear.
+
+## 7. Merge and Rebase
+
+```bash
+git merge <branch>
+git merge --no-ff <branch>
+git merge --abort
+git rebase <base-branch>
+git rebase --continue
+git rebase --abort
+```
+
+- `git merge <branch>` incorporates the named branch into the current branch.
+	Switch to the destination branch first. Git may create a merge commit or
+	fast-forward the branch pointer.
+- `git merge --no-ff <branch>` always creates a merge commit, preserving a
+	visible branch boundary.
+- `git merge --abort` stops a conflicted merge and attempts to return to the
+	pre-merge state. Save unrelated work before starting a merge.
+- `git rebase <base-branch>` replays the current branch's commits on top of the
+	base branch, creating new commit IDs. It can make local history linear.
+- During a rebase conflict, resolve and stage files, then use
+	`git rebase --continue`. Use `git rebase --abort` to stop and return to the
+	pre-rebase state.
+- Do not rebase commits others already use unless your team coordinates
+	rewriting that shared history.
+
+Feature-branch flow:
+
+```bash
+git switch main
+git pull --ff-only
+git switch -c feature/my-change
+# edit files
+git add <files>
+git commit -m "Implement my change"
+git push -u origin feature/my-change
+```
+
+## 8. Remotes and Synchronization
+
+```bash
+git remote -v
+git remote add <name> <url>
+git remote rename <old-name> <new-name>
+git remote remove <name>
+git fetch
+git fetch <remote>
+git pull
+git pull --ff-only
+git push
+git push -u <remote> <branch>
+git push <remote> --delete <branch>
+```
+
+- A remote is a named URL for another copy of a repository. `origin` is the
+	conventional name for the repository you cloned.
+- `git remote -v` shows remote names and their fetch/push URLs. `git remote add`
+	registers another remote, commonly an upstream project.
+- `git remote remove <name>` removes the local remote configuration; it does
+	not delete the hosted repository.
+- `git fetch` downloads remote commits and updates remote-tracking references.
+	It does not integrate them into your current branch or change working files.
+- `git pull` fetches and then integrates the upstream branch, usually by merge
+	unless configured otherwise. Inspect your status first.
+- `git pull --ff-only` refuses to create a merge commit if a fast-forward is not
+	possible.
+- `git push` sends local commits to a remote. The first push of a new branch is
+	commonly `git push -u origin <branch>`; `-u` sets its upstream so later push
+	and pull commands can omit remote and branch names.
+- `git push origin --delete <branch>` deletes a branch from the remote, not
+	locally. If a push is rejected because the remote has newer commits, fetch
+	and integrate them before retrying. Avoid force-pushing shared branches.
+
+## 9. Inspect History
+
+```bash
+git log
+git log --oneline
+git log --oneline --graph --decorate --all
+git log -p
+git log -- <file>
+git show <commit>
+git show --stat <commit>
+git blame <file>
+git shortlog
+git shortlog -sn
+```
+
+- `git log` lists commits reachable from the current branch, newest first.
+- `--oneline` shows a short commit ID and subject. `--graph --decorate --all`
+	draws branch relationships and includes all references.
+- `git log -p` includes each commit's patch. Add `-- <file>` to show commits
+	that changed a particular path.
+- `git show <commit>` displays commit metadata and changes. `HEAD` means the
+	current commit; `HEAD~1` means its first parent.
+- `git show --stat <commit>` summarizes changed files and line counts.
+- `git blame <file>` shows the commit and author associated with each line. It
+	helps locate context but does not explain why a line changed.
+- `git shortlog` groups commits by author; `-sn` shows a sorted count.
+
+## 10. Stash Temporary Work
+
+```bash
+git stash
+git stash push -m "description"
+git stash push -u -m "include new files"
+git stash list
+git stash show -p stash@{0}
+git stash apply
+git stash apply stash@{1}
+git stash pop
+git stash drop stash@{0}
+git stash clear
+```
+
+- `git stash` saves eligible uncommitted tracked changes and cleans them from
+	the working tree. New untracked files are not included by default.
+- `git stash push -m "..."` labels the saved work; `-u` also includes
+	untracked files.
+- `git stash list` shows saved stashes; `stash@{0}` is the newest.
+- `git stash show -p` displays a stash's patch.
+- `git stash apply` restores a stash and keeps it in the list. `git stash pop`
+	restores the newest stash and removes it if applying succeeds.
+- `git stash drop` removes one stash. `git stash clear` removes all stashes and
+	is difficult to undo; inspect the list before using it.
+
+## 11. Undo and Recover Changes
+
+Choose an undo command based on where the change is: working tree, staging
+area, or commit history. These operations are not interchangeable.
+
+```bash
+git restore <file>
+git restore --staged <file>
+git restore --source=<commit> <file>
+git revert <commit>
+git reset --soft <commit>
+git reset --mixed <commit>
+git reset --hard <commit>
+git reflog
+```
+
+- `git restore <file>` discards unstaged working-tree changes to that tracked
+	file, restoring it from the index. Discarded edits may be difficult or
+	impossible to recover.
+- `git restore --staged <file>` unstages a file while keeping its edits in the
+	working tree.
+- `git restore --source=<commit> <file>` replaces the file with its version at
+	that commit. Review the diff before committing the result.
+- `git revert <commit>` creates a new commit that reverses the selected commit.
+	It is generally safer for undoing a commit that has already been shared.
+- `git reset --soft <commit>` moves the current branch to a commit and keeps
+	changes staged.
+- `git reset --mixed <commit>` (the default reset mode) moves the branch and
+	keeps changes in the working tree, unstaged.
+- `git reset --hard <commit>` moves the branch and discards tracked staged and
+	working-tree changes. It can permanently destroy work; confirm the target and
+	check status first. It does not remove untracked files.
+- `git reflog` lists recent movements of local references, including many
+	commits no longer visible in normal history. To recover one, create a branch:
+	`git switch -c recovery <commit-id>`.
+- Avoid rewriting commits already pushed to a shared branch. Coordinate with
+	collaborators before any history rewrite.
+
+## 12. Resolve Merge Conflicts
+
+1. Run `git status` to see which files are conflicted.
+2. Open each file and find conflict markers: `<<<<<<<`, `=======`, and `>>>>>>>`.
+3. Edit the file to the intended final content and remove all conflict markers.
+4. Review the result, run relevant tests, and stage the resolved file with
+	 `git add <file>`.
+5. Finish with `git commit` for a merge, or `git rebase --continue` for a rebase.
+
+To cancel, use `git merge --abort` or `git rebase --abort`, as appropriate. Do
+not stage a conflicted file until you have resolved and reviewed it.
+
+## 13. Tags and Releases
+
+```bash
+git tag
+git tag <tag-name>
+git tag -a <tag-name> -m "Release message"
+git show <tag-name>
+git push origin <tag-name>
+git push origin --tags
+git tag -d <tag-name>
+git push origin --delete <tag-name>
+```
+
+- `git tag` lists local tags. `git tag <tag-name>` creates a lightweight tag at
+	the current commit.
+- `git tag -a` creates an annotated tag with a message; annotated tags are
+	commonly used for releases.
+- `git push` does not automatically publish tags. Push one tag by name or use
+	`--tags` to publish all local tags.
+- `git tag -d` deletes a local tag. Deleting a remote tag is separate and
+	affects everyone using that remote; coordinate first.
+
+## 14. Ignore Files and Clean Up
+
+```bash
+git check-ignore -v <path>
+git clean -n
+git clean -f
+git clean -nd
+git clean -fd
+```
+
+- `.gitignore` lists untracked files and patterns Git should ignore. It does
+	not stop tracking a file that has already been committed.
+- `git check-ignore -v <path>` explains which ignore rule matches a path.
+- `git clean -n` previews untracked files that would be removed. Add `-d` to
+	include untracked directories.
+- `git clean -f` deletes untracked files; `git clean -fd` also deletes
+	untracked directories. These deletions are not normally recoverable. Preview
+	with `-n` first. Ignored files are excluded unless `-x` is used;
+	`git clean -fdx` can delete build outputs and local data, so use extreme care.
+
+## 15. Search and Compare
+
+```bash
+git grep "search text"
+git grep -n "search text" <commit>
+git diff --check
+git diff --word-diff
+git log --grep="message text"
+git log -S"text" -- <file>
+```
+
+- `git grep` searches tracked files in the working tree; `-n` includes line
+	numbers. Supplying a commit searches that snapshot instead.
+- `git diff --check` finds whitespace errors such as trailing spaces in changes.
+- `git diff --word-diff` emphasizes changed words instead of whole lines.
+- `git log --grep` finds commit messages matching text.
+- `git log -S"text"` finds commits where the number of occurrences of text
+	changed, useful for locating when a line or symbol was introduced or removed.
+
+## 16. Submodules and Worktrees
+
+```bash
+git submodule status
+git submodule update --init --recursive
+git worktree list
+git worktree add <directory> <branch>
+git worktree remove <directory>
+```
+
+- Submodules are repositories referenced by another repository. After cloning
+	a project that uses them, `git submodule update --init --recursive`
+	initializes and checks out the recorded versions.
+- A worktree checks out another branch into a separate directory while sharing
+	repository data, allowing work on two branches at once.
+- Save work inside a worktree before removing it. Git may refuse to remove a
+	worktree that contains changes.
+
+## 17. Useful Reference Names
+
+- `HEAD`: the current commit.
+- `HEAD~1`: the first parent of the current commit; `HEAD~2` is two first-parent
+	commits back.
+- `HEAD^`: the first parent; `HEAD^2` means the second parent of a merge commit.
+- `<branch>..<other-branch>`: commits reachable from `other-branch` but not from
+	`<branch>` when used with commands such as `git log`.
+- `@{upstream}`: the upstream branch configured for the current branch.
+- `--`: marks the end of options and the beginning of path arguments.
+
+## 18. Safe Habits
+
+- Run `git status` before and after operations that change repository state.
+- Review `git diff` before staging and `git diff --staged` before committing.
+- Prefer `git revert` for undoing changes that have already been shared.
+- Preview cleanup with `git clean -n`; be especially cautious with
+	`git reset --hard`, `git clean -f`, and force-pushing.
+- Make small commits with clear messages, and avoid committing secrets or local
+	credentials.
+- When unsure about a command, inspect its short usage with `git <command> -h`
+	or its manual with `git help <command>`.
